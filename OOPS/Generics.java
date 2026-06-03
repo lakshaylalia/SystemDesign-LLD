@@ -35,7 +35,7 @@ class Calculator <T extends Number> {
         return a.doubleValue() - b.doubleValue();
     }
 
-    public double multiply(T a, T b) {-
+    public double multiply(T a, T b) {
         return a.doubleValue() * b.doubleValue();
     }
 
