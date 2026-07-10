@@ -61,4 +61,5 @@ public class AnswerDAOImpl implements AnswerDAO {
     public long count() {
         return answerRepository.getAll().size();
     }
+
 }

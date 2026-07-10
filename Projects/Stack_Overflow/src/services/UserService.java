@@ -7,6 +7,9 @@ import models.User;
 import dao.UserDAO;
 import dao.UserDAOImpl;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class UserService {
     private UserDAO userDAO;
 
@@ -46,5 +49,12 @@ public class UserService {
 
     public void delete(Long id) {
         userDAO.delete(id);
+    }
+
+    public List<User> getTopUsersByReputation(int limit) {
+        return userDAO.getAll().stream()
+                .sorted((a, b) -> Long.compare(b.getReputation(), a.getReputation()))
+                .limit(limit)
+                .collect(Collectors.toList());
     }
 }

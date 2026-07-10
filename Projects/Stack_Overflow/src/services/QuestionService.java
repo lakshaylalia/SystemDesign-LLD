@@ -6,17 +6,25 @@ import exceptions.QuestionNotFoundException;
 import exceptions.UnauthorizedActionException;
 import models.Question;
 import dao.QuestionDAO;
-import dao.QuestionDAOImpl;
 import dto.PagedResult;
-
+import models.User;
+import strategy.SortStrategy;
+import events.EventType;
+import events.Observer;
+import events.ReputationEvent;
 import java.util.ArrayList;
+
 import java.util.List;
 
 public class QuestionService {
     private QuestionDAO questionDAO;
+    private UserService userService;
+    private List<Observer> observers = new ArrayList<>();
+    private PostSortService<Question> questionSortService = new PostSortService<>();
 
-    public QuestionService() {
-        this.questionDAO = new QuestionDAOImpl();
+    public QuestionService(QuestionDAO questionDAO, UserService userService) {
+        this.questionDAO = questionDAO;
+        this.userService = userService;
     }
 
     public Question addQuestion(Question question) {
@@ -71,8 +79,17 @@ public class QuestionService {
         if (question.getAuthor().getId().equals(userId)) {
             throw new BusinessRuleViolationException("Cannot vote on your own question");
         }
-        question.incrementUpvotes();
+        if (question.hasUpvoted(userId)) {
+            throw new BusinessRuleViolationException("You have already upvoted this question");
+        }
+        if (question.hasDownvoted(userId)) {
+            throw new BusinessRuleViolationException("You have already downvoted this question. Remove your downvote first");
+        }
+
+        question.addUpvote(userId);
         question.setUpdatedAt();
+
+        notifyObservers(new ReputationEvent(EventType.QUESTION_UPVOTED, question.getAuthor().getId(), 5L));
     }
 
     public void downvoteQuestion(Long questionId, Long userId) {
@@ -83,8 +100,22 @@ public class QuestionService {
         if (question.getAuthor().getId().equals(userId)) {
             throw new BusinessRuleViolationException("Cannot vote on your own question");
         }
-        question.incrementDownvotes();
+        if (question.hasDownvoted(userId)) {
+            throw new BusinessRuleViolationException("You have already downvoted this question");
+        }
+        if (question.hasUpvoted(userId)) {
+            throw new BusinessRuleViolationException("You have already upvoted this question. Remove your upvote first");
+        }
+        User voter = userService.getUserById(userId);
+        if (voter.getReputation() < 15L) {
+            throw new UnauthorizedActionException("You need at least 15 reputation to downvote");
+        }
+
+        question.addDownvote(userId);
         question.setUpdatedAt();
+
+        notifyObservers(new ReputationEvent(EventType.QUESTION_DOWNVOTED, question.getAuthor().getId(), 2L));
+        notifyObservers(new ReputationEvent(EventType.QUESTION_DOWNVOTED, userId, 1L));
     }
 
     public void addNewTag(Long questionId, String tag) {
@@ -115,15 +146,22 @@ public class QuestionService {
         return questionDAO.searchByKeyword(keyword);
     }
 
-    public List<Question> getAllQuestionsSortedByDate() {
+    public List<Question> getAllQuestionsSorted() {
         List<Question> all = questionDAO.getAll();
-        all.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
-        return all;
+        return questionSortService.sort(all);
     }
 
-    public List<Question> getAllQuestionsSortedByVotes() {
-        List<Question> all = questionDAO.getAll();
-        all.sort((a, b) -> Long.compare(b.getUpvotes(), a.getUpvotes()));
-        return all;
+    public void setQuestionSortStrategy(SortStrategy<Question> strategy) {
+        questionSortService.setStrategy(strategy);
+    }
+
+    public void addObserver(Observer observer) {
+        observers.add(observer);
+    }
+
+    private void notifyObservers(ReputationEvent event) {
+        for (Observer o : observers) {
+            o.onEvent(event);
+        }
     }
 }

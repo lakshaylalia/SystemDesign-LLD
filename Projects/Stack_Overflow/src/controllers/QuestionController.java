@@ -14,9 +14,9 @@ public class QuestionController {
     private QuestionService questionService;
     private AnswerService answerService;
 
-    public QuestionController() {
-        this.questionService = new QuestionService();
-        this.answerService = new AnswerService();
+    public QuestionController(QuestionService questionService, AnswerService answerService) {
+        this.questionService = questionService;
+        this.answerService = answerService;
     }
 
     public QuestionDTO addQuestion(Question question) {
@@ -109,8 +109,8 @@ public class QuestionController {
                 .collect(Collectors.toList());
     }
 
-    public List<QuestionDTO> getAllQuestionsSortedByDate() {
-        List<Question> questions = questionService.getAllQuestionsSortedByDate();
+    public List<QuestionDTO> getAllQuestionsSorted() {
+        List<Question> questions = questionService.getAllQuestionsSorted();
         return questions.stream()
                 .map(q -> {
                     int count = answerService.getAnswersForQuestion(q.getId()).size();
@@ -119,13 +119,4 @@ public class QuestionController {
                 .collect(Collectors.toList());
     }
 
-    public List<QuestionDTO> getAllQuestionsSortedByVotes() {
-        List<Question> questions = questionService.getAllQuestionsSortedByVotes();
-        return questions.stream()
-                .map(q -> {
-                    int count = answerService.getAnswersForQuestion(q.getId()).size();
-                    return DTOMapper.toQuestionDTO(q, count);
-                })
-                .collect(Collectors.toList());
-    }
 }

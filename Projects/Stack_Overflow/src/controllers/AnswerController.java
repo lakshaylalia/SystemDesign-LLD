@@ -1,5 +1,7 @@
 package controllers;
 
+import dao.AnswerDAOImpl;
+import dao.QuestionDAO;
 import dto.AnswerDTO;
 import dto.PagedResult;
 import mapper.DTOMapper;
@@ -12,8 +14,8 @@ import java.util.stream.Collectors;
 public class AnswerController {
     private AnswerService answerService;
 
-    public AnswerController() {
-        this.answerService = new AnswerService();
+    public AnswerController(AnswerService answerService) {
+        this.answerService = answerService;
     }
 
     public AnswerDTO addAnswer(Answer answer) {
@@ -67,8 +69,8 @@ public class AnswerController {
         answerService.downvoteAnswer(answerId, userId);
     }
 
-    public List<AnswerDTO> getAnswersSortedByVotes(Long questionId) {
-        List<Answer> answers = answerService.getAnswersSortedByVotes(questionId);
+    public List<AnswerDTO> getAnswersSorted(Long questionId) {
+        List<Answer> answers = answerService.getAllAnswersSorted(questionId);
         return answers.stream()
                 .map(DTOMapper::toAnswerDTO)
                 .collect(Collectors.toList());

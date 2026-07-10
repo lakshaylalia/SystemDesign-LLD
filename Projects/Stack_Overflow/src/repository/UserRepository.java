@@ -11,6 +11,7 @@ public class UserRepository {
     private static final UserRepository instance = new UserRepository();
 
     private Map<Long, User> idToUser = new ConcurrentHashMap<>();
+    private Map<String, User> usernameToUser = new ConcurrentHashMap<>();
 
     private UserRepository() {}
 
@@ -20,6 +21,7 @@ public class UserRepository {
 
     public User save(User user) {
         idToUser.put(user.getId(), user);
+        usernameToUser.put(user.getUsername(), user);
         return user;
     }
 
@@ -28,12 +30,7 @@ public class UserRepository {
     }
 
     public User getUserByUsername(String username) {
-        for (User user : idToUser.values()) {
-            if(user.getUsername().equals(username)) {
-                return user;
-            }
-        }
-        return null;
+        return usernameToUser.get(username);
     }
 
     public List<User> getAll() {
@@ -41,11 +38,20 @@ public class UserRepository {
     }
 
     public User update(User user) {
+        User existing = idToUser.get(user.getId());
+        if (existing != null) {
+            usernameToUser.remove(existing.getUsername());
+        }
         idToUser.put(user.getId(), user);
+        usernameToUser.put(user.getUsername(), user);
         return user;
     }
 
     public void delete(Long id) {
+        User user = idToUser.get(id);
+        if (user != null) {
+            usernameToUser.remove(user.getUsername());
+        }
         idToUser.remove(id);
     }
 }
